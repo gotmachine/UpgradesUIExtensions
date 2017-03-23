@@ -53,6 +53,7 @@
     <Compile Include="EditorTooltipWithUpgrades.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RDColoredUpgradeIcon.cs" />
+    <Compile Include="tests.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
