@@ -41,5 +41,8 @@ So public domain, feel free to do anything, especially updating this plugin if I
 
 - In the editor, ability for the player to select which upgrades he want to apply to the placed part.
 
+#### v1.1 for KSP 1.2.2 - 23/03/2017
+- Added KSP-AVC support for version checking
+
 #### v1.0 for KSP 1.2.2 - 22/03/2017
 - Initial release
