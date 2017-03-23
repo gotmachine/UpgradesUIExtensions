@@ -20,12 +20,15 @@ This plugin is a collections of user interface tweaks aimed at making the part/m
 
 Soon to be available on **CKAN** !
 
-But you can get the [latest release and source](https://github.com/gotmachine/UpgradesUIExtensions/releases/latest) from github.
+**[LATEST RELEASE](https://github.com/gotmachine/UpgradesUIExtensions/releases/latest)** and [source](https://github.com/gotmachine/UpgradesUIExtensions) from github.
 
-## Disclaimer
+#### Disclaimer
 I'm far from a skilled programmer, so the code for this may be ugly. As far as I know, it does the job and doesn't break the game. However, keep in mind that *I don't really know what I'm doing*. If anybody has the time to review and comment my code, I'm open to suggestions and pull requests :)
 
-## Licensing
+#### MiniAVC disclaimer
+This mod includes version checking using [MiniAVC](http://forum.kerbalspaceprogram.com/threads/79745). If you opt-in, it will use the internet to check whether there is a new version available. Data is only read from the internet and no personal information is sent. For a more comprehensive version checking experience, please download the [KSP-AVC Plugin](http://forum.kerbalspaceprogram.com/threads/79745). 
+
+#### Licensing
 This masterful work of art is released under the [unlicense](http://unlicense.org/). 
 So public domain, feel free to do anything, especially updating this plugin if I'm not around.
 
