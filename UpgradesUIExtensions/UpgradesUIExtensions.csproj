@@ -56,9 +56,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>"C:\Users\Got\Desktop\KSP\Tools\pdb2mdb_2015\pdb2mdb.exe" "C:\Users\Got\Desktop\KSP\Plugins projects\PartUpgradeVABGUI\PartUpgradeVABGUI\PartUpgradeVABGUI\bin\Debug\UpgradesUIExtensions.dll"
-xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\PartUpgradeVABGUI\PartUpgradeVABGUI\PartUpgradeVABGUI\bin\Debug\UpgradesUIExtensions.dll" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"
-xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\PartUpgradeVABGUI\PartUpgradeVABGUI\PartUpgradeVABGUI\bin\Debug\UpgradesUIExtensions.dll.mdb" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"</PostBuildEvent>
+    <PostBuildEvent>"C:\Users\Got\Desktop\KSP\Tools\pdb2mdb_2015\pdb2mdb.exe" "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesUIExtensions.dll"
+xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesUIExtensions.dll" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"
+xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesUIExtensions.dll.mdb" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

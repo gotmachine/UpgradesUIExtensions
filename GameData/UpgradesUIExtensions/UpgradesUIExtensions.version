@@ -1,0 +1,36 @@
+{
+    "NAME":"Upgrades UI extensions",
+    "URL":"http://forum.kerbalspaceprogram.com/index.php?/topic/158081-122-upgradesuiextensions-v10-qol-vabsph-tweaks-for-part-upgrades/",
+    "DOWNLOAD":"https://github.com/gotmachine/UpgradesUIExtensions/releases/latest",
+    "GITHUB":
+    {
+        "USERNAME":"gotmachine",
+        "REPOSITORY":"UpgradesUIExtensions",
+        "ALLOW_PRE_RELEASE":false,
+    },
+    "VERSION":
+    {
+        "MAJOR":1,
+        "MINOR":1,
+        "PATCH":0,
+        "BUILD":0
+    },
+    "KSP_VERSION":
+    {
+        "MAJOR":1,
+        "MINOR":2,
+        "PATCH":2
+    },
+    "KSP_VERSION_MIN":
+    {
+        "MAJOR":1,
+        "MINOR":2,
+        "PATCH":2
+    },
+    "KSP_VERSION_MAX":
+    {
+        "MAJOR":1,
+        "MINOR":2,
+        "PATCH":2
+    }
+} 
