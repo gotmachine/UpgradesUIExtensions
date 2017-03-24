@@ -31,8 +31,8 @@ namespace UpgradesUIExtensions
       // These instances will be used to retrieve the updated tooltip text and widgets
       foreach (AvailablePart ap in PartLoader.LoadedPartsList)
       {
-        // Part newPart = (Part)obj;
-        Part upgradedPart = Instantiate(ap.partPrefab);
+        UnityEngine.Object obj = UnityEngine.Object.Instantiate(ap.partPrefab);
+        Part upgradedPart = (Part)obj;
         upgradedPart.gameObject.name = ap.name;
         upgradedPart.partInfo = ap;
 
@@ -78,6 +78,12 @@ namespace UpgradesUIExtensions
       {
         Debug.Log("Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
         return;
+      }
+      if (partInfo.name == "liquidEngineT45")
+      {
+        List<string> upgradelist = new List<string>();
+        upgradelist.Add("LVT-Turbopump-heavierR");
+        PartUpgradesSelector.ApplySelectedUpgrades(part, upgradelist);
       }
 
       // Rebuilding the tooltip cost string :

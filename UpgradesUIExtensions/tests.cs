@@ -56,24 +56,33 @@ namespace UpgradesUIExtensions
       this.partPrefab = partPrefab;
     }
 
-    public static void ApplySelectedUpgrades(Part part)
+    public static void ApplySelectedUpgrades(Part part, List<string> upgradeNames)
     {
-      List<string> upgradesToApply = new List<string>();
+      part.enabled = true;
+      part.gameObject.SetActive(true);
       foreach (PartModule pm in part.Modules)
       {
-        foreach (ConfigNode cn in pm.upgrades)
-        {
-          // if (isAvailable && isSelected)
-          if (cn.GetValue("name__") == "LVT-GasGen-precProp")
-          {
-            upgradesToApply.Add(cn.GetValue("name__"));
-          }
-        }
+        pm.enabled = true;
+        pm.isEnabled = true;
 
-        // pm.ApplyUpgradeNode (List< string > appliedUps, ConfigNode node, bool doLoad)
-        // Applies the upgrades to a confignode. Will either copy the upgrades back to the node or (if doLoad) calls load/onload on it.
-        pm.ApplyUpgradeNode(upgradesToApply, ConfigNode.CreateConfigFromObject(pm), true);
+        pm.upgrades.RemoveAll(p => !upgradeNames.Contains(p.GetValue("name__")));
+        pm.ApplyUpgrades(PartModule.StartState.Editor);
+        pm.enabled = false;
+        pm.isEnabled = false;
+      }
+      part.gameObject.SetActive(false);
+      part.enabled = false;
+    }
 
+    public static void ApplySelectedUpgrades2(Part part, List<string> upgradeNames)
+    {
+      foreach (PartModule pm in part.Modules)
+      {
+
+        // pm.upgrades.RemoveAll(p => !upgradeNames.Contains(p.GetValue("name__")));
+        pm.upgradesApplied.Clear();
+        pm.upgradesApplied.AddRange(upgradeNames);
+        pm.ApplyUpgrades(PartModule.StartState.Editor);
       }
     }
   }
