@@ -27,36 +27,57 @@ namespace UpgradesUIExtensions
 
     public void Start()
     {
+
+      // Another messy fix to attempt to replicate the exact state of the game
+      // when OnLoad() is normally called.
+      GameScenes currentScene = HighLogic.LoadedScene;
+      HighLogic.LoadedScene = GameScenes.LOADING;
+
       // Create an hidden and disabled instance for every loaded part with their stats correctly updated according to the available updates
       // These instances will be used to retrieve the updated tooltip text and widgets
       foreach (AvailablePart ap in PartLoader.LoadedPartsList)
       {
-        // Part newPart = (Part)obj;
-        Part upgradedPart = Instantiate(ap.partPrefab);
-        upgradedPart.gameObject.name = ap.name;
-        upgradedPart.partInfo = ap;
-
-        // Temporally enable the part to be able to call ApplyUpgrades on all modules
-        // so upgrades nodes are checked and applyied to the part/module properties :
-        upgradedPart.gameObject.SetActive(true);
-        foreach (PartModule pm in upgradedPart.Modules)
+        // Special parts like EVAkerbal or flag aren't needed :
+        if (ap.partUrl != "")
         {
-          pm.ApplyUpgrades(PartModule.StartState.Editor);
-          // Not really needed since the whole part will be disabled, but probably safer :
-          pm.enabled = false;
-          pm.isEnabled = false;
+          // Part newPart = (Part)obj;
+          Part upgradedPart = Instantiate(ap.partPrefab);
+          upgradedPart.gameObject.name = ap.name;
+          upgradedPart.partInfo = ap;
+
+          // Temporally enable the part to be able to call ApplyUpgrades on all modules
+          // so upgrades nodes are checked and applyied to the part/module properties.
+          // We try to call modules OnLoad to replicate the exact state of part prefabs.
+          // The current method isn't great, i'm relying on the node list being the exact same as the module list
+          // this isn't always true : the stock ModuleTripLogger doesn't have confignode in the GameDatabase...
+          // there is probably a more reliable way by finding the right confignode for each module, need to
+          // investigate
+          upgradedPart.gameObject.SetActive(true);
+          int i = 0;
+          ConfigNode partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
+          ConfigNode[] moduleNodes = partNode.GetNodes("MODULE");
+          foreach (PartModule pm in upgradedPart.Modules)
+          {
+            pm.OnAwake();
+            if (moduleNodes.Count() > i)
+            {
+              if (moduleNodes[i].GetValue("name") == pm.moduleName)
+              {
+                pm.OnLoad(moduleNodes[i]);
+              }
+            }
+            pm.ApplyUpgrades(PartModule.StartState.Editor);
+            i++;
+          }
+
+          // Disable the gameobject so the part isn't rendered and can't be interacted with
+          upgradedPart.gameObject.SetActive(false);
+
+          // Add the part to our list
+          upgradedParts.Add(upgradedPart);
         }
-
-        // Again, not needed in practice but better safe than sorry :
-        upgradedPart.enabled = false;
-
-        // Disable the gameobject so the part isn't rendered, can't be interacted with and
-        // no code run from updates / fixedupdates
-        upgradedPart.gameObject.SetActive(false);
-
-        // Add the part to our list
-        upgradedParts.Add(upgradedPart);
       }
+      HighLogic.LoadedScene = currentScene;
     }
 
     public void Update()
@@ -95,7 +116,7 @@ namespace UpgradesUIExtensions
         "<b>Mass: </b>" + (dryMass + part.GetResourceMass()).ToString("0.###") + "t (<b>Dry mass: </b>" + dryMass.ToString("0.###") + "t)\n";
       basicInfo +=
         "<b>Tolerance: </b>" + part.crashTolerance.ToString("G") + " m/s impact\n" +
-        "<b>Tolerance: </b>" + part.gTolerance.ToString("G") + " Gees, " + part.maxPressure.ToString("G") + " kPA Pressure\n" +
+        "<b>Tolerance: </b>" + part.gTolerance.ToString("G") + " G, " + part.maxPressure.ToString("G") + " kPA Pressure\n" +
         "<b>Max. Temp. Int / Skin: </b>" + part.maxTemp.ToString("G") + " / " + part.skinMaxTemp.ToString("G") + " K\n";
 
       if (part.CrewCapacity > 0) { basicInfo += "<b>Crew capacity: </b>" + part.CrewCapacity + "\n"; }
@@ -185,27 +206,40 @@ namespace UpgradesUIExtensions
         {
           while (true)
           {
+            string widgetTitle;
+            string widgetText;
+
+            // Get the upgrades-updated module text info from our special prefab
+            try
+            {
+              widgetTitle = part.Modules.GetModule(i).GUIName;
+              widgetText = part.Modules.GetModule(i).GetInfo();
+            }
+            catch (Exception)
+            {
+              widgetTitle = widget.textName.text;
+              widgetText = widget.textInfo.text;
+              Debug.LogWarning("UpgradesUIextensions : could not retrieve module text for module " + part.Modules.GetModule(i).GUIName);
+            }
+
             // Stock doesn't create a widget for modules that return an empty GetInfo(), but seems to be
             // checking against an already parsed string where control characters are removed
-            if (RemoveControlCharacters(part.Modules.GetModule(i).GetInfo()).Equals(""))
+            if (RemoveControlCharacters(widgetText).Equals(""))
             {
               i++;
             }
             // The module has a widget text, we update it with some extra info on the applied upgrades
-            // Note : could have used GetUpgradeInfo(), but added a bit of extra formatting to make things nicer
             else
             {
-              string widgetTitle;
-              string widgetText;
-
+              // Special formatting for PartStatsUpgradeModule
               if (part.Modules.GetModule(i) is PartStatsUpgradeModule)
               {
-                widgetTitle = "Part upgrade";
+                widgetTitle = "Part stats upgrade";
                 widgetText = "";
 
                 if (!(part.Modules.GetModule(i).upgradesApplied.Count() > 0))
                 {
-                  widgetText += "No upgrade researched yet";
+                  widgetText += "No stats modifications in current upgrades";
                 }
                 else
                 {
@@ -238,11 +272,9 @@ namespace UpgradesUIExtensions
                   }
                 }
               }
+              // All other modules : append upgrade text if showUpgradesInModuleInfo is set to true in the module cfg
               else
               {
-                widgetTitle = part.Modules.GetModule(i).GUIName;
-                widgetText = part.Modules.GetModule(i).GetInfo();
-
                 if (part.Modules.GetModule(i).showUpgradesInModuleInfo)
                 {
                   if (part.Modules.GetModule(i).upgradesApplied.Count() > 0)
@@ -261,7 +293,6 @@ namespace UpgradesUIExtensions
                   // widgetText += "\n" + part.Modules.GetModule(i).PrintUpgrades();
                 }
               }
-
               widget.Setup(widgetTitle, widgetText);
 
               i++;
