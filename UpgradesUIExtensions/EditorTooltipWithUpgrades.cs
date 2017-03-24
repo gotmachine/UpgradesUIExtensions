@@ -42,39 +42,50 @@ namespace UpgradesUIExtensions
         {
           // Part newPart = (Part)obj;
           Part upgradedPart = Instantiate(ap.partPrefab);
-          upgradedPart.gameObject.name = ap.name;
-          upgradedPart.partInfo = ap;
-
-          // Temporally enable the part to be able to call ApplyUpgrades on all modules
-          // so upgrades nodes are checked and applyied to the part/module properties.
-          // We try to call modules OnLoad to replicate the exact state of part prefabs.
-          // The current method isn't great, i'm relying on the node list being the exact same as the module list
-          // this isn't always true : the stock ModuleTripLogger doesn't have confignode in the GameDatabase...
-          // there is probably a more reliable way by finding the right confignode for each module, need to
-          // investigate
-          upgradedPart.gameObject.SetActive(true);
-          int i = 0;
-          ConfigNode partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
-          ConfigNode[] moduleNodes = partNode.GetNodes("MODULE");
-          foreach (PartModule pm in upgradedPart.Modules)
+          if (upgradedPart != null)
           {
-            pm.OnAwake();
-            if (moduleNodes.Count() > i)
+            upgradedPart.gameObject.name = ap.name;
+            upgradedPart.partInfo = ap;
+
+            // Temporally enable the part to be able to call ApplyUpgrades on all modules
+            // so upgrades nodes are checked and applyied to the part/module properties.
+            // We try to call modules OnLoad to replicate the exact state of part prefabs.
+            // The current method isn't great, i'm relying on the node list being the exact same as the module list
+            // this isn't always true : the stock ModuleTripLogger doesn't have confignode in the GameDatabase...
+            // there is probably a more reliable way by finding the right confignode for each module, need to
+            // investigate
+            upgradedPart.gameObject.SetActive(true);
+            int i = 0;
+            ConfigNode partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
+            ConfigNode[] moduleNodes = null;
+            if (partNode != null)
             {
-              if (moduleNodes[i].GetValue("name") == pm.moduleName)
-              {
-                pm.OnLoad(moduleNodes[i]);
-              }
+              moduleNodes = partNode.GetNodes("MODULE");
             }
-            pm.ApplyUpgrades(PartModule.StartState.Editor);
-            i++;
+            foreach (PartModule pm in upgradedPart.Modules)
+            {
+              pm.OnAwake();
+              if (moduleNodes != null)
+              {
+                if (moduleNodes.Count() > i)
+                {
+                  if (moduleNodes[i].GetValue("name") == pm.moduleName)
+                  {
+                    pm.OnLoad(moduleNodes[i]);
+                  }
+                }
+              }
+
+              pm.ApplyUpgrades(PartModule.StartState.Editor);
+              i++;
+            }
+
+            // Disable the gameobject so the part isn't rendered and can't be interacted with
+            upgradedPart.gameObject.SetActive(false);
+
+            // Add the part to our list
+            upgradedParts.Add(upgradedPart);
           }
-
-          // Disable the gameobject so the part isn't rendered and can't be interacted with
-          upgradedPart.gameObject.SetActive(false);
-
-          // Add the part to our list
-          upgradedParts.Add(upgradedPart);
         }
       }
       HighLogic.LoadedScene = currentScene;
@@ -97,7 +108,7 @@ namespace UpgradesUIExtensions
       Part part = upgradedParts.Find(p => p.partInfo == partInfo);
       if (part == null)
       {
-        Debug.Log("Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
+        Debug.LogWarning("Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
         return;
       }
 
