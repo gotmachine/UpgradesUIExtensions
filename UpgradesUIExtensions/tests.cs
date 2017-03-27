@@ -31,7 +31,20 @@ namespace UpgradesUIExtensions
   [KSPAddon(KSPAddon.Startup.EditorAny, false)]
   public class PartUpgradesManager : MonoBehaviour
   {
+    public class PartUpgrade
+    {
+      Part upgradePrefab;
+      List<string> partUpgrades;
+      List<string> partAvailableUpgrades;
+      List<string> partSelectedUpgrades;
+    }
 
+    public List <PartUpgrade> upgradedParts = new List<PartUpgrade>();
+
+    public void Start()
+    {
+      PartUpgradeHandler.AllEnabled = false;
+    }
   }
 
   public class PartListTooltipUpgradeWidget : PartListTooltipWidget
