@@ -16,18 +16,44 @@ using UnityEngine;
 using KSP.UI.Screens.Editor;
 using System.Globalization;
 using System.Text;
+using UnityEngine.UI;
 
 namespace UpgradesUIExtensions
 {
   [KSPAddon(KSPAddon.Startup.EditorAny, false)]
   public class PatchEditorTooltip : MonoBehaviour
   {
-    List<Part> upgradedParts = new List<Part>();
+    public class UpgradePrefab
+    {
+      public class PartUpgrade
+      {
+        public string name;
+        public bool isUnlocked;
+        public bool isEnabled;
+
+        public PartUpgrade(string name, bool unlocked, bool enabled)
+        {
+          this.name = name;
+          this.isUnlocked = unlocked;
+          this.isEnabled = enabled;
+        }
+      }
+      public Part part;
+      public List<PartUpgrade> upgrades;
+
+      public UpgradePrefab(Part part, List<PartUpgrade> upgrades)
+      {
+        this.part = part;
+        this.upgrades = upgrades;
+      }
+    }
+
+    List<UpgradePrefab> upgradePrefabs = new List<UpgradePrefab>();
     PartListTooltip tooltip = null;
+    GameObject widgetContainer;
 
     public void Start()
     {
-
       // Another messy fix to attempt to replicate the exact state of the game
       // when OnLoad() is normally called.
       GameScenes currentScene = HighLogic.LoadedScene;
@@ -44,9 +70,10 @@ namespace UpgradesUIExtensions
           Part upgradedPart = Instantiate(ap.partPrefab);
           if (upgradedPart != null)
           {
+            List<UpgradePrefab.PartUpgrade> upgrades = new List<UpgradePrefab.PartUpgrade>();
             upgradedPart.gameObject.name = ap.name;
             upgradedPart.partInfo = ap;
-
+            
             // Temporally enable the part to be able to call ApplyUpgrades on all modules
             // so upgrades nodes are checked and applyied to the part/module properties.
             // We try to call modules OnLoad to replicate the exact state of part prefabs.
@@ -75,8 +102,17 @@ namespace UpgradesUIExtensions
                   }
                 }
               }
-
               pm.ApplyUpgrades(PartModule.StartState.Editor);
+
+              // Detect upgrades for the module and add them to the part upgrade list
+              List<ConfigNode> newUpgrades = pm.upgrades.Where(x => !upgrades.Any(y => x.GetValue("name__") == y.name)).ToList();
+              foreach (ConfigNode cm in newUpgrades)
+              {
+                upgrades.Add(new UpgradePrefab.PartUpgrade(
+                  cm.GetValue("name__"),
+                  pm.upgradesApplied.Contains(cm.GetValue("name__")),
+                  true));
+              }
               i++;
             }
 
@@ -84,11 +120,14 @@ namespace UpgradesUIExtensions
             upgradedPart.gameObject.SetActive(false);
 
             // Add the part to our list
-            upgradedParts.Add(upgradedPart);
+            upgradePrefabs.Add(new UpgradePrefab(upgradedPart, upgrades));
           }
         }
       }
       HighLogic.LoadedScene = currentScene;
+
+      // We now want to control ourself if the upgrades are available :
+      PartUpgradeHandler.AllEnabled = false;
     }
 
     public void Update()
@@ -105,7 +144,7 @@ namespace UpgradesUIExtensions
       // Find the currently shown part in the list of updated parts instances
       var field = typeof(PartListTooltip).GetField("partInfo", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance);
       AvailablePart partInfo = (AvailablePart)field.GetValue(tooltip);
-      Part part = upgradedParts.Find(p => p.partInfo == partInfo);
+      Part part = upgradePrefabs.Find(p => p.part.partInfo == partInfo).part;
       if (part == null)
       {
         Debug.LogWarning("Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
@@ -311,6 +350,31 @@ namespace UpgradesUIExtensions
             }
           }
         }
+      }
+
+      widgetContainer = tooltip.panelExtended.gameObject.GetChild("Content");
+      PartListTooltipWidget newWidget = Instantiate(tooltip.extInfoModuleWidgetPrefab);
+      newWidget.transform.parent = widgetContainer.transform;
+
+      // Add "toggle" component
+      Toggle toggle = newWidget.gameObject.AddComponent<Toggle>();
+      toggle.onValueChanged += onToggle;
+
+      newWidget.gameObject.SetActive(true);
+      newWidget.Setup("test", "test");
+
+    }
+
+    private void onToggle(Toggle isOn)
+    {
+      if (isOn)
+      {
+        this.enabled = true;
+        widgetContainer.GetComponent<CanvasRenderer>().SetColor(Color.blue);
+      }
+      else
+      {
+        widgetContainer.GetComponent<CanvasRenderer>().SetColor(Color.red);
       }
     }
 
