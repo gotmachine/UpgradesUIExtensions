@@ -52,12 +52,30 @@ namespace UpgradesUIExtensions
             // We try to call modules OnLoad to replicate the exact state of part prefabs.
             // The current method isn't great, i'm relying on the node list being the exact same as the module list
             // this isn't always true : the stock ModuleTripLogger doesn't have confignode in the GameDatabase...
+            // Also got an exception with GameDatabase.Instance.GetConfigNode in a particular setup (see issue
             // there is probably a more reliable way by finding the right confignode for each module, need to
             // investigate
             upgradedPart.gameObject.SetActive(true);
             int i = 0;
-            ConfigNode partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
+            ConfigNode partNode;
             ConfigNode[] moduleNodes = null;
+            try
+            {
+              if (GameDatabase.Instance.ExistsConfigNode(ap.partUrl))
+              {
+                partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
+              }
+              else
+              {
+                partNode = null;
+              }
+            }
+            catch (Exception)
+            {
+              partNode = null;
+              Debug.LogError("[UpgradesUIExtensions] Exception while trying to get a part ConfigNode from GameDatabase:\n" +
+                "part:" + ap.name + ", partUrl:" + ap.partUrl);
+            }
             if (partNode != null)
             {
               moduleNodes = partNode.GetNodes("MODULE");
@@ -108,7 +126,7 @@ namespace UpgradesUIExtensions
       Part part = upgradedParts.Find(p => p.partInfo == partInfo);
       if (part == null)
       {
-        Debug.LogWarning("Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
+        Debug.LogWarning("[UpgradesUIExtensions] Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
         return;
       }
 
@@ -230,7 +248,7 @@ namespace UpgradesUIExtensions
             {
               widgetTitle = widget.textName.text;
               widgetText = widget.textInfo.text;
-              Debug.LogWarning("UpgradesUIextensions : could not retrieve module text for module " + part.Modules.GetModule(i).GUIName);
+              Debug.LogWarning("[UpgradesUIExtensions] Could not retrieve module text for module " + part.Modules.GetModule(i).GUIName);
             }
 
             // Stock doesn't create a widget for modules that return an empty GetInfo(), but seems to be
