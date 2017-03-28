@@ -27,7 +27,6 @@ namespace UpgradesUIExtensions
 
     public void Start()
     {
-
       // Another messy fix to attempt to replicate the exact state of the game
       // when OnLoad() is normally called.
       GameScenes currentScene = HighLogic.LoadedScene;
@@ -40,7 +39,6 @@ namespace UpgradesUIExtensions
         // Special parts like EVAkerbal or flag aren't needed :
         if (ap.partUrl != "")
         {
-          // Part newPart = (Part)obj;
           Part upgradedPart = Instantiate(ap.partPrefab);
           if (upgradedPart != null)
           {
@@ -50,36 +48,9 @@ namespace UpgradesUIExtensions
             // Temporally enable the part to be able to call ApplyUpgrades on all modules
             // so upgrades nodes are checked and applyied to the part/module properties.
             // We try to call modules OnLoad to replicate the exact state of part prefabs.
-            // The current method isn't great, i'm relying on the node list being the exact same as the module list
-            // this isn't always true : the stock ModuleTripLogger doesn't have confignode in the GameDatabase...
-            // Also got an exception with GameDatabase.Instance.GetConfigNode in a particular setup (see issue
-            // there is probably a more reliable way by finding the right confignode for each module, need to
-            // investigate
             upgradedPart.gameObject.SetActive(true);
             int i = 0;
-            ConfigNode partNode;
-            ConfigNode[] moduleNodes = null;
-            try
-            {
-              if (GameDatabase.Instance.ExistsConfigNode(ap.partUrl))
-              {
-                partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
-              }
-              else
-              {
-                partNode = null;
-              }
-            }
-            catch (Exception)
-            {
-              partNode = null;
-              Debug.LogError("[UpgradesUIExtensions] Exception while trying to get a part ConfigNode from GameDatabase:\n" +
-                "part:" + ap.name + ", partUrl:" + ap.partUrl);
-            }
-            if (partNode != null)
-            {
-              moduleNodes = partNode.GetNodes("MODULE");
-            }
+            ConfigNode[] moduleNodes = ap.partConfig.GetNodes("MODULE");
             foreach (PartModule pm in upgradedPart.Modules)
             {
               pm.OnAwake();
@@ -93,7 +64,6 @@ namespace UpgradesUIExtensions
                   }
                 }
               }
-
               pm.ApplyUpgrades(PartModule.StartState.Editor);
               i++;
             }
@@ -227,11 +197,12 @@ namespace UpgradesUIExtensions
 
       // Update every module widget :
       int i = 0;
+      List<PartModule> modules = part.Modules.GetModules<PartModule>().OrderBy(p => p.GUIName).ToList();
       foreach (PartListTooltipWidget widget in tooltip.panelExtended.GetComponentsInChildren<PartListTooltipWidget>())
       {
         // Resource widgets are named "PartListTooltipExtendedResourceInfo(Clone)"
         // Module widgets are named "PartListTooltipExtendedPartInfo(Clone)"
-        if (widget.name == "PartListTooltipExtendedPartInfo(Clone)" && part.Modules.Count >= i)
+        if (widget.name == "PartListTooltipExtendedPartInfo(Clone)" && modules.Count >= i)
         {
           while (true)
           {
@@ -241,14 +212,14 @@ namespace UpgradesUIExtensions
             // Get the upgrades-updated module text info from our special prefab
             try
             {
-              widgetTitle = part.Modules.GetModule(i).GUIName;
-              widgetText = part.Modules.GetModule(i).GetInfo();
+              widgetTitle = modules[i].GUIName;
+              widgetText = modules[i].GetInfo();
             }
             catch (Exception)
             {
               widgetTitle = widget.textName.text;
               widgetText = widget.textInfo.text;
-              Debug.LogWarning("[UpgradesUIExtensions] Could not retrieve module text for module " + part.Modules.GetModule(i).GUIName);
+              Debug.LogWarning("[UpgradesUIExtensions] Could not retrieve module text for module " + modules[i].GUIName);
             }
 
             // Stock doesn't create a widget for modules that return an empty GetInfo(), but seems to be
@@ -261,21 +232,21 @@ namespace UpgradesUIExtensions
             else
             {
               // Special formatting for PartStatsUpgradeModule
-              if (part.Modules.GetModule(i) is PartStatsUpgradeModule)
+              if (modules[i] is PartStatsUpgradeModule)
               {
                 widgetTitle = "Part stats upgrade";
                 widgetText = "";
 
-                if (!(part.Modules.GetModule(i).upgradesApplied.Count() > 0))
+                if (!(modules[i].upgradesApplied.Count() > 0))
                 {
                   widgetText += "No stats modifications in current upgrades";
                 }
                 else
                 {
-                  if (part.Modules.GetModule(i).showUpgradesInModuleInfo)
+                  if (modules[i].showUpgradesInModuleInfo)
                   {
                     widgetText += "<b>Current upgrades:\n</b>";
-                    foreach (string upgrade in part.Modules.GetModule(i).upgradesApplied)
+                    foreach (string upgrade in modules[i].upgradesApplied)
                     {
                       widgetText += "<b>" + PartUpgradeManager.Handler.GetUpgrade(upgrade).title + "</b>\n";
                     }
@@ -283,7 +254,7 @@ namespace UpgradesUIExtensions
                     widgetText += "\n<color=#99ff00ff><b>Modified stats :</b></color>\n";
                   }
 
-                  PartStatsUpgradeModule psum = (PartStatsUpgradeModule)part.Modules.GetModule(i);
+                  PartStatsUpgradeModule psum = (PartStatsUpgradeModule)modules[i];
                   if (psum.GetModuleCost(part.partInfo.cost, ModifierStagingSituation.CURRENT) > float.Epsilon || psum.GetModuleCost(part.partInfo.cost, ModifierStagingSituation.CURRENT) < -float.Epsilon)
                   {
                     widgetText += "<b>Cost modifier : </b>" + psum.GetModuleCost(part.partInfo.cost, ModifierStagingSituation.CURRENT).ToString("+ 0;- #") + " <sprite=2 tint=1>\n";
@@ -304,16 +275,16 @@ namespace UpgradesUIExtensions
               // All other modules : append upgrade text if showUpgradesInModuleInfo is set to true in the module cfg
               else
               {
-                if (part.Modules.GetModule(i).showUpgradesInModuleInfo)
+                if (modules[i].showUpgradesInModuleInfo)
                 {
-                  if (part.Modules.GetModule(i).upgradesApplied.Count() > 0)
+                  if (modules[i].upgradesApplied.Count() > 0)
                   {
                     widgetText += "\n<color=#99ff00ff><b>Upgrades :</b></color>\n";
 
-                    foreach (string upgrade in part.Modules.GetModule(i).upgradesApplied)
+                    foreach (string upgrade in modules[i].upgradesApplied)
                     {
                       widgetText += "<b>- " + PartUpgradeManager.Handler.GetUpgrade(upgrade).title + ":</b>\n";
-                      ConfigNode cn = part.Modules.GetModule(i).upgrades.Find(p => p.GetValue("name__") == upgrade);
+                      ConfigNode cn = modules[i].upgrades.Find(p => p.GetValue("name__") == upgrade);
                       widgetText += cn.GetValue("description__") + "\n";
                     }
                   }
