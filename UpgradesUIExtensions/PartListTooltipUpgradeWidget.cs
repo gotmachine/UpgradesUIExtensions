@@ -9,26 +9,17 @@ using static UnityEngine.UI.Toggle;
 
 namespace UpgradesUIExtensions
 {
-  class PartListTooltipUpgradeWidget : PartListTooltipWidget
+  public class PartUpgradeUI : MonoBehaviour
   {
-    Toggle toggle;
-    public void Start()
-    {
-      // Add "toggle" component
-      toggle = this.gameObject.AddComponent<Toggle>();
-      toggle.onValueChanged.AddListener(onToggle);
-    }
+    public string upgradeName;
+    public bool isUnlocked;
+    public bool isEnabled;
 
-    private void onToggle(bool isOn)
+    public PartUpgradeUI(string name, bool unlocked, bool enabled)
     {
-      if (isOn)
-      {
-        this.gameObject.GetComponent<CanvasRenderer>().SetColor(Color.blue);
-      }
-      else
-      {
-        this.gameObject.GetComponent<CanvasRenderer>().SetColor(Color.red);
-      }
+      this.upgradeName = name;
+      this.isUnlocked = unlocked;
+      this.isEnabled = enabled;
     }
   }
 }

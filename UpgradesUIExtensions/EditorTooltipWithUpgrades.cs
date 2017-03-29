@@ -17,6 +17,7 @@ using KSP.UI.Screens.Editor;
 using System.Globalization;
 using System.Text;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace UpgradesUIExtensions
 {
@@ -25,23 +26,11 @@ namespace UpgradesUIExtensions
   {
     public class UpgradePrefab
     {
-      public class PartUpgrade
-      {
-        public string name;
-        public bool isUnlocked;
-        public bool isEnabled;
 
-        public PartUpgrade(string name, bool unlocked, bool enabled)
-        {
-          this.name = name;
-          this.isUnlocked = unlocked;
-          this.isEnabled = enabled;
-        }
-      }
       public Part part;
-      public List<PartUpgrade> upgrades;
+      public List<PartUpgradeUI> upgrades;
 
-      public UpgradePrefab(Part part, List<PartUpgrade> upgrades)
+      public UpgradePrefab(Part part, List<PartUpgradeUI> upgrades)
       {
         this.part = part;
         this.upgrades = upgrades;
@@ -51,6 +40,12 @@ namespace UpgradesUIExtensions
     List<UpgradePrefab> upgradePrefabs = new List<UpgradePrefab>();
     PartListTooltip tooltip = null;
     GameObject widgetContainer;
+
+    public void OnDestroy()
+    {
+      // TODO : check if allenabled is used for sandbox
+      PartUpgradeHandler.AllEnabled = true;
+    }
 
     public void Start()
     {
@@ -70,7 +65,7 @@ namespace UpgradesUIExtensions
           Part upgradedPart = Instantiate(ap.partPrefab);
           if (upgradedPart != null)
           {
-            List<UpgradePrefab.PartUpgrade> upgrades = new List<UpgradePrefab.PartUpgrade>();
+            List<PartUpgradeUI> upgrades = new List<PartUpgradeUI>();
             upgradedPart.gameObject.name = ap.name;
             upgradedPart.partInfo = ap;
             
@@ -105,13 +100,15 @@ namespace UpgradesUIExtensions
               pm.ApplyUpgrades(PartModule.StartState.Editor);
 
               // Detect upgrades for the module and add them to the part upgrade list
-              List<ConfigNode> newUpgrades = pm.upgrades.Where(x => !upgrades.Any(y => x.GetValue("name__") == y.name)).ToList();
+              // Also set the enabled state of upgrades in the UpgradeManager
+              List<ConfigNode> newUpgrades = pm.upgrades.Where(x => !upgrades.Any(y => x.GetValue("name__") == y.upgradeName)).ToList();
               foreach (ConfigNode cm in newUpgrades)
               {
-                upgrades.Add(new UpgradePrefab.PartUpgrade(
+                upgrades.Add(new PartUpgradeUI(
                   cm.GetValue("name__"),
                   pm.upgradesApplied.Contains(cm.GetValue("name__")),
                   true));
+                PartUpgradeManager.Handler.SetEnabled(cm.GetValue("name__"), true);
               }
               i++;
             }
@@ -128,6 +125,7 @@ namespace UpgradesUIExtensions
 
       // We now want to control ourself if the upgrades are available :
       PartUpgradeHandler.AllEnabled = false;
+      
     }
 
     public void Update()
@@ -353,28 +351,48 @@ namespace UpgradesUIExtensions
       }
 
       widgetContainer = tooltip.panelExtended.gameObject.GetChild("Content");
-      PartListTooltipWidget newWidget = Instantiate(tooltip.extInfoModuleWidgetPrefab);
-      newWidget.transform.parent = widgetContainer.transform;
 
-      // Add "toggle" component
-      Toggle toggle = newWidget.gameObject.AddComponent<Toggle>();
-      toggle.onValueChanged += onToggle;
-
-      newWidget.gameObject.SetActive(true);
-      newWidget.Setup("test", "test");
-
+      foreach (PartUpgradeUI pu in upgradePrefabs.First(p => p.part == part).upgrades)
+      {
+        // Create new widget
+        PartListTooltipWidget newWidget = Instantiate(tooltip.extInfoModuleWidgetPrefab);
+        // Add widget to list
+        newWidget.transform.parent = widgetContainer.transform;
+        // Add "toggle" component
+        Toggle toggle = newWidget.gameObject.AddComponent<Toggle>();
+        toggle.onValueChanged.AddListener(onToggle);
+        // Add the upgrade handler
+        PartUpgradeUI handler = newWidget.gameObject.AddComponent<PartUpgradeUI>();
+        handler = pu;
+        // Everything is good
+        newWidget.gameObject.SetActive(true);
+        // Create text
+        newWidget.Setup(handler.upgradeName, "Enabled : " + handler.isEnabled + "\nUnlocked : " + handler.isUnlocked);
+        if (!handler.isUnlocked)
+        {
+          newWidget.GetComponent<Image>().color = Color.red;
+          toggle.enabled = false;
+        }
+        if (!handler.isEnabled)
+        {
+          newWidget.GetComponent<Image>().color = Color.yellow;
+        }
+      }
     }
 
-    private void onToggle(Toggle isOn)
+    private void onToggle(bool isOn)
     {
       if (isOn)
       {
-        this.enabled = true;
-        widgetContainer.GetComponent<CanvasRenderer>().SetColor(Color.blue);
+        EventSystem.current.currentSelectedGameObject.GetComponent<Image>().color = Color.clear;
+        EventSystem.current.currentSelectedGameObject.GetComponent<PartUpgradeUI>().isEnabled = true;
+        PartUpgradeManager.Handler.SetEnabled(EventSystem.current.currentSelectedGameObject.GetComponent<PartUpgradeUI>().upgradeName, true);
       }
       else
       {
-        widgetContainer.GetComponent<CanvasRenderer>().SetColor(Color.red);
+        EventSystem.current.currentSelectedGameObject.GetComponent<Image>().color = Color.yellow;
+        EventSystem.current.currentSelectedGameObject.GetComponent<PartUpgradeUI>().isEnabled = false;
+        PartUpgradeManager.Handler.SetEnabled(EventSystem.current.currentSelectedGameObject.GetComponent<PartUpgradeUI>().upgradeName, false);
       }
     }
 
