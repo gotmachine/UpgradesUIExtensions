@@ -1,0 +1,31 @@
+How to make this work :
+
+List<UpgradePrefab>
+  - Part part
+  - List<PartUpgrade> partUpgrades
+    // PartUpgrade : represent a PARTUPGRADE, like those contained in the stock manager/handler
+    // We can get all text info (gui name, description, tech required...) from the manager/handler
+    // so no need to replicate it here. 
+    - string upgradeName : the upgrade name as defined in the confignode
+    - bool partEnabled : is this upgrade enabled for this part (will be checked when instantiating a new part in the editor)
+    - List<ModuleUpgrade> moduleUpgrades
+      // ModuleUpgrade : represent each modules in the part and the UPGRADE node in this module that correspond to this PARTUPGRADE
+      - string module : the name of the module
+      - string description : the upgrade description
+     - List<UpgradeOverride> overrides
+     // UpgradeOverride : represent a combination of a module and a PARTUPGRADE that is disabled by this PARTUPGRADE
+     // this is used to manage the "ExclusiveWith__" system : if this PartUpgrade has partEnabled = true AND
+     // UpgradeOverride is present for another PartUpgrade's ModuleUpgrade in this UpgradePrefab, this another 
+     // PartUpgrade's ModuleUpgrade is greyed out. If ALL these PartUpgrade's ModuleUpgrade are greyed out, the whole 
+     // PartUpgrade widget is greyed out and not toggleable. PartStatsUpgradeModule should have its own logic but can rely
+     // on the same structure (using the "IsAdditiveUpgrade__" field)
+      - string module : the module name
+      - string partUpgrade : the partupgrade name
+      
+Interface :
+In the part tooltip, on top of the module list, we add the following :
+- Toggle button labelled modules / upgrades, wich the widget list between modules view and upgrades view
+- Stock green toggle : is locked green when the part have all its available
+  upgrades applied. If not, it is grey, and clicking on it apply all the availablle upgrades. Try to do a tooltip.
+- Stock green toggle : same as the first one, but for ALL parts.
+      
