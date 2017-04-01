@@ -66,29 +66,7 @@ namespace UpgradesUIExtensions
             // there is probably a more reliable way by finding the right confignode for each module, need to
             // investigate
             upgradedPart.gameObject.SetActive(true);
-            int i = 0;
-            ConfigNode partNode = GameDatabase.Instance.GetConfigNode(ap.partUrl);
-            ConfigNode[] moduleNodes = null;
-            if (partNode != null)
-            {
-              moduleNodes = partNode.GetNodes("MODULE");
-            }
-            foreach (PartModule pm in upgradedPart.Modules)
-            {
-              pm.OnAwake();
-              if (moduleNodes != null)
-              {
-                if (moduleNodes.Count() > i)
-                {
-                  if (moduleNodes[i].GetValue("name") == pm.moduleName)
-                  {
-                    pm.OnLoad(moduleNodes[i]);
-                  }
-                }
-              }
-              pm.ApplyUpgrades(PartModule.StartState.Editor);
-              i++;
-            }
+            LoadModulesUpgrades(upgradedPart, ap);
 
             // Disable the gameobject so the part isn't rendered and can't be interacted with
             upgradedPart.gameObject.SetActive(false);
@@ -118,7 +96,7 @@ namespace UpgradesUIExtensions
       if (updateTooltip)
       {
         updateTooltip = false;
-        // Update the upgrade prefabs in response to player toggle
+        // Update the upgrade prefab in response to player toggle
         UpgradeWidgetComponent[] upgrades = tooltip.panelExtended.gameObject.GetComponentsInChildren<UpgradeWidgetComponent>();
         UpgradeWidgetComponent toggledWidget = upgrades.First(p => p.isUpdated);
         upgradePrefabs.Find(p => p.part.partInfo.name == toggledWidget.partName).UpdateUpgradesState(toggledWidget);
@@ -128,12 +106,12 @@ namespace UpgradesUIExtensions
         {
           Destroy(upgrades[k].gameObject);
         }
-        // Reapply upgrades on the part
-        foreach (PartModule pm in part.Modules)
-        {
-          pm.ApplyUpgrades(PartModule.StartState.Editor);
-        }
       }
+
+      // Update the PartUpgradeHandler with enabled upgrades for this part and ApplyUpgrades() on all modules
+      ApplyUpgrades(part);
+
+      // Instantiate and setup the upgrade widgets
       CreateUpgradeWidgets(upgradePrefabs.First(p => p.part == part), tooltip.panelExtended.gameObject.GetChild("Content"));
 
       // Rebuilding the tooltip cost string :
@@ -338,6 +316,103 @@ namespace UpgradesUIExtensions
       }
     }
 
+    private void LoadModulesUpgrades(Part p, AvailablePart ap)
+    {
+      int i = 0;
+      ConfigNode[] moduleNodes = ap.partConfig.GetNodes("MODULE");
+      foreach (PartModule pm in p.Modules)
+      {
+        pm.OnAwake();
+        if (moduleNodes != null)
+        {
+          if (moduleNodes.Count() > i)
+          {
+            if (moduleNodes[i].GetValue("name") == pm.moduleName)
+            {
+              pm.OnLoad(moduleNodes[i]);
+            }
+          }
+        }
+        pm.ApplyUpgrades(PartModule.StartState.Editor);
+        i++;
+      }
+    }
+
+    private void ApplyUpgrades(Part part)
+    {
+      // Get the upgraded state of 
+      Dictionary<PartModule, bool> moduleUpgraded = new Dictionary<PartModule, bool>();
+      foreach (PartModule pm in part.Modules)
+      {
+        if (pm.upgradesApplied.Count > 0)
+        {
+          moduleUpgraded.Add(pm, true);
+        }
+        else
+        {
+          moduleUpgraded.Add(pm, false);
+        }
+      }
+
+      // Enable upgrades in the handler to reflect the state of user selection for this part
+      foreach (PartUpgrade pu in upgradePrefabs.Find(p => p.part == part).upgrades)
+      {
+        if (pu.upgradeState == PartUpgrade.UpgradeState.Disabled)
+        {
+          PartUpgradeManager.Handler.SetEnabled(pu.upgradeName, false);
+
+        }
+        else
+        {
+          PartUpgradeManager.Handler.SetEnabled(pu.upgradeName, true);
+        }
+        Debug.Log("[UUIE] Upgrade " + pu.upgradeName + ", Handler : " + PartUpgradeManager.Handler.IsEnabled(pu.upgradeName));
+      }
+
+      // Apply upgrades but reload config first if necessary
+      int i = 0;
+      ConfigNode[] moduleNodes = part.partInfo.partConfig.GetNodes("MODULE");
+      foreach (PartModule pm in part.Modules)
+      {
+        pm.ApplyUpgrades(PartModule.StartState.Editor);
+        bool wasUpgraded = false;
+        moduleUpgraded.TryGetValue(pm, out wasUpgraded);
+        
+        if (wasUpgraded && pm.upgradesApplied.Count == 0)
+        {
+          pm.OnAwake();
+          if (moduleNodes != null)
+          {
+            if (moduleNodes.Count() > i)
+            {
+              if (moduleNodes[i].GetValue("name") == pm.moduleName)
+              {
+                pm.OnLoad(moduleNodes[i]);
+              }
+            }
+          }
+          // In case of a PartStatsUpgradeModule, we need to reload the whole part
+          // so we reload all modules 
+          if (pm is PartStatsUpgradeModule)
+          {
+            PartStatsUpgradeModule psum = (PartStatsUpgradeModule)pm;
+            psum.costOffset = 0;
+            psum.massOffset = 0;
+            foreach (ConfigNode.Value v in psum.upgradeNode.values)
+            {
+              if (v.name != "mass" && v.name != "cost" && v.name != "massAdd " && v.name != "costAdd")
+              {
+                FieldInfo partField = part.GetType().GetField(v.name);
+                partField.SetValue(part, Convert.ChangeType(part.partInfo.partConfig.GetValue(v.name), partField.FieldType));
+              }
+            }
+          }
+          pm.ApplyUpgrades(PartModule.StartState.Editor);
+        }
+        i++;
+      }
+    }
+
     private Part GetTooltipInstance()
     {
       // Get the PartListTooltip
@@ -398,7 +473,7 @@ namespace UpgradesUIExtensions
       {
         upgradeComponent.upgradeState = PartUpgrade.UpgradeState.Disabled;
       }
-      upgradeComponent.isUpdated = true; // Seems that this has no effect
+      upgradeComponent.isUpdated = true;
       updateTooltip = true;
     }
 

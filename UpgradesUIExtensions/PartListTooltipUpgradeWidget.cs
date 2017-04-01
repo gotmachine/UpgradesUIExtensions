@@ -15,6 +15,11 @@ namespace UpgradesUIExtensions
     public Part part;
     public List<PartUpgrade> upgrades;
 
+    // If all upgrades were disabled by the player and
+    // and the part has a PartStatsUpgradeModule,
+    // we need to reload the part from its confignode
+    public bool needConfigReload = false;
+
     public UpgradePrefab(Part part)
     {
       this.part = part;
@@ -105,16 +110,15 @@ namespace UpgradesUIExtensions
     {
       PartUpgrade pu = upgrades.Find(p => p.upgradeName == toggledUpdate.upgrade);
       pu.upgradeState = toggledUpdate.upgradeState;
+
+      // We reenable overriden upgrades that may have been disabled :
       if (toggledUpdate.upgradeState == PartUpgrade.UpgradeState.Enabled)
       {
-        PartUpgradeManager.Handler.SetEnabled(toggledUpdate.upgrade, true);
-        // We reenable overriden upgrades that may have been disabled :
         pu.UpdateOverridenUpgrades(this);
       }
+      // In case the player has disabled an upgrade, we need to enable the last overriden upgrade, if any
       else if (toggledUpdate.upgradeState == PartUpgrade.UpgradeState.Disabled)
       {
-        PartUpgradeManager.Handler.SetEnabled(toggledUpdate.upgrade, false);
-        // In case the player has disabled an upgrade, we need to enable the last overriden upgrade, if any
         pu.EnableLastOverridenUpgrade(this);
       }
     }
@@ -143,7 +147,11 @@ namespace UpgradesUIExtensions
     public string upgradeName;
     public UpgradeState upgradeState;
     public bool isUnlocked;
-    
+
+    // If all upgrades were disabled by the player, 
+    // we need to reload the module from its confignode
+    public bool needConfigReload = false; 
+
     private List<ModuleUpgrade> moduleUpgrades;
     private List<string> overridenUpgrades;
     private string techTitle;
@@ -170,10 +178,9 @@ namespace UpgradesUIExtensions
     {
       foreach (PartUpgrade pu in prefab.upgrades)
       {
-        if (pu.upgradeState == UpgradeState.Disabled && overridenUpgrades.Contains(pu.upgradeName))
+        if (overridenUpgrades.Contains(pu.upgradeName))
         {
           pu.upgradeState = UpgradeState.Overriden;
-          PartUpgradeManager.Handler.SetEnabled(pu.upgradeName, true);
         }
       }
     }
