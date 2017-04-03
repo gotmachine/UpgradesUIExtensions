@@ -270,7 +270,7 @@ namespace UpgradesUIExtensions
             {
               widgetTitle = widget.textName.text;
               widgetText = widget.textInfo.text;
-              Debug.LogWarning("UpgradesUIextensions : could not retrieve module text for module " + modules[i].GUIName);
+              Debug.LogWarning("[UpgradesUIextensions] Could not retrieve module text for module " + modules[i].GUIName);
             }
 
             // Stock doesn't create a widget for modules that return an empty GetInfo(), but seems to be
@@ -404,7 +404,6 @@ namespace UpgradesUIExtensions
         {
           PartUpgradeManager.Handler.SetEnabled(pu.upgradeName, true);
         }
-        Debug.Log("[UUIE] Upgrade " + pu.upgradeName + ", Handler : " + PartUpgradeManager.Handler.IsEnabled(pu.upgradeName));
       }
 
       // Apply upgrades on modules
@@ -446,8 +445,16 @@ namespace UpgradesUIExtensions
             {
               if (v.name != "mass" && v.name != "cost" && v.name != "massAdd " && v.name != "costAdd")
               {
-                FieldInfo partField = prefab.part.GetType().GetField(v.name);
-                partField.SetValue(prefab.part, Convert.ChangeType(prefab.part.partInfo.partConfig.GetValue(v.name), partField.FieldType));
+                try
+                {
+                  FieldInfo partField = prefab.part.GetType().GetField(v.name);
+                  partField.SetValue(prefab.part, Convert.ChangeType(prefab.part.partInfo.partConfig.GetValue(v.name), partField.FieldType));
+                }
+                catch (Exception)
+                {
+                  Debug.LogError("[UpgradesUIextensions] Could not revert part field \"" + v.name + "\" to initial value");
+                }
+                
               }
             }
           }
@@ -468,7 +475,7 @@ namespace UpgradesUIExtensions
       UpgradePrefab upgradePrefab = upgradePrefabs.Find(p => p.part.partInfo == partInfo);
       if (ReferenceEquals(upgradePrefab, null)) // Workaround because unity does a silly overload of the == operator
       {
-        Debug.LogWarning("Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
+        Debug.LogWarning("[UpgradesUIextensions] Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
       }
       return upgradePrefab;
     }
