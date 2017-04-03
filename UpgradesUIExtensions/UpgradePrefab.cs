@@ -1,11 +1,7 @@
-﻿using KSP.UI.Screens.Editor;
-using UnityEngine;
+﻿using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using UnityEngine.UI;
-using static UnityEngine.UI.Toggle;
 
 namespace UpgradesUIExtensions
 {
@@ -46,6 +42,8 @@ namespace UpgradesUIExtensions
           mu.moduleName = pm.moduleName;
           mu.moduleTitle = pm.GUIName;
           mu.description = pm.upgrades[i].GetValue("description__");
+          mu.statsNode = pm.upgrades[i].GetNode("PartStats");
+
           partUpgrade.AddModule(mu);
 
           // We check the fields "ExclusiveWith__" (standard modules) or "IsAdditiveUpgrade__" (PartStatsUpgradeModule)
@@ -133,6 +131,7 @@ namespace UpgradesUIExtensions
       public string moduleName;
       public string moduleTitle;
       public string description;
+      public ConfigNode statsNode;
     }
 
     public enum UpgradeState
@@ -147,6 +146,7 @@ namespace UpgradesUIExtensions
     public string upgradeName;
     public UpgradeState upgradeState;
     public bool isUnlocked;
+    public bool isUntracked;
 
     // If all upgrades were disabled by the player, 
     // we need to reload the module from its confignode
@@ -163,7 +163,16 @@ namespace UpgradesUIExtensions
       upgradeName = name;
       isUnlocked = PartUpgradeManager.Handler.IsUnlocked(upgradeName);
       string techRequired = PartUpgradeManager.Handler.GetUpgrade(upgradeName).techRequired;
-      techTitle = (techRequired != null) ? ResearchAndDevelopment.GetTechnologyTitle(techRequired) : "Undefined";
+      if (techRequired != null)
+      {
+        techTitle = ResearchAndDevelopment.GetTechnologyTitle(techRequired);
+        isUntracked = false;
+      }
+      else
+      {
+        techTitle = "Undefined";
+        isUntracked = true;
+      }
       upgradeTitle = PartUpgradeManager.Handler.GetUpgrade(upgradeName).title;
       moduleUpgrades = new List<ModuleUpgrade>();
       overridenUpgrades = new List<string>();
@@ -225,14 +234,60 @@ namespace UpgradesUIExtensions
     }
 
     // Build the string to display in the widget
-    public string GetInfo()
+    public string GetInfo(UpgradePrefab infoPrefab = null)
     {
       string info = "";
-      info += isUnlocked ? "Researched at " + techTitle + "\n" : "Will be available at " + techTitle + "\n";
+      switch (upgradeState)
+      {
+        case UpgradeState.Overriden:
+          if (ReferenceEquals(infoPrefab,null))
+          {
+            info += "Overriden\n";
+            break;
+          }
+          PartUpgrade pu = infoPrefab.upgrades.Find(p => p.isOverriding(upgradeName) && p.upgradeState == UpgradeState.Enabled);
+          if (!ReferenceEquals(pu, null))
+          {
+            info += "Overriden by upgrade:\n" + pu.upgradeTitle;
+            break;
+          }
+          break;
+        case UpgradeState.Enabled:
+          info += "Upgrade is enabled\n";
+          break;
+        case UpgradeState.Disabled:
+          info += "Upgrade is disabled\n";
+          break;
+        case UpgradeState.Unresearched:
+          info += "Will be available at node:\n" + techTitle;
+          break;
+      }
       info += "\n";
+
+      if (moduleUpgrades.Exists(p => p.moduleName == "PartStatsUpgradeModule"))
+      {
+        info += "<color=#99ff00ff><b>Part stats modifiers:</b></color>\n";
+        ConfigNode cn = moduleUpgrades.Find(p => p.moduleName == "PartStatsUpgradeModule").statsNode;
+        float mass = 0f;       
+        if (cn.TryGetValue("mass", ref mass)){info += "Mass: " + mass.ToString("+ 0.###;- #.###") + " t\n"; }
+        if (cn.TryGetValue("massAdd", ref mass)) { info += "Mass: " + mass.ToString("+ 0.###;- #.###") + " t\n"; }
+        float cost = 0f;
+        if (cn.TryGetValue("cost", ref cost)) { info += "Cost: " + cost.ToString("+ 0;- #") + " <sprite=2 tint=1>\n"; }
+        if (cn.TryGetValue("costAdd", ref cost)) { info += "Cost: " + cost.ToString("+ 0;- #") + " <sprite=2 tint=1>\n"; }
+        foreach (ConfigNode.Value v in cn.values)
+        {
+          if (v.name != "mass" && v.name != "cost" && v.name != "massAdd " && v.name != "costAdd")
+          {
+            info += v.name + ": " + v.value + "\n";
+          }
+        }
+      }
       foreach (ModuleUpgrade mu in moduleUpgrades)
       {
-        info += mu.moduleTitle + ":\n" + mu.description + "\n\n";
+        if (mu.moduleName != "PartStatsUpgradeModule")
+        {
+          info += "<color=#99ff00ff><b>" + mu.moduleTitle + ":</b></color>\n" + mu.description + "\n";
+        }
       }
       return info;
     }
@@ -240,8 +295,6 @@ namespace UpgradesUIExtensions
 
   public class UpgradeWidgetComponent : MonoBehaviour
   {
-
-
     public string partName;
     public string upgrade;
     public PartUpgrade.UpgradeState upgradeState;
