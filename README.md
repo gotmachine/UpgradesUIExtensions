@@ -2,7 +2,7 @@
 
 This plugin is a collections of user interface tweaks aimed at making the part/module upgrades feature introduced in 1.2 a bit less painful to use for the player :
 
-![screenshot](https://github.com/gotmachine/UpgradesUIExtensions/blob/master/Documents/tooltipTweaks.png)
+![screenshot](https://github.com/gotmachine/UpgradesUIExtensions/raw/features/Documents/tooltipTweaks.png)
 
 #### VAB/SPH part tooltips show upgraded stats
 - The part stats are now updated according to unlocked upgrades.
