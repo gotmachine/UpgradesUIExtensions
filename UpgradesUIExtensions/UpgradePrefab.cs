@@ -56,7 +56,7 @@ namespace UpgradesGUI
               pm.upgrades[i].TryGetValue("IsAdditiveUpgrade__",ref isAdditive);
               // If this UPGRADE node has IsAdditiveUpgrade__ = false, this mean that it will override
               // all previous UPGRADE nodes. This mean that those upgrades can't be selected as long as this one is,
-              // so we iterate trough the previous nodes and them to the override list
+              // so we iterate trough the previous nodes and add them to the override list
               if (!isAdditive)
               {
                 for (int j = i-1; j >= 0; j--)
@@ -82,23 +82,23 @@ namespace UpgradesGUI
       ParseUpgradesState();
     }
 
-    // Update the toggleable status of every upgrade
+    // Initialize the state of every upgrade
     public void ParseUpgradesState()
     {
       foreach (PartUpgrade pu in upgrades)
       {
-          if (!pu.isUnlocked)
-          {
-            pu.upgradeState = PartUpgrade.UpgradeState.Unresearched;
-          }
-          else if (upgrades.Exists(p => p.isOverriding(pu.upgradeName)))
-          {
-            pu.upgradeState = PartUpgrade.UpgradeState.Overriden;
-          }
-          else
-          {
-            pu.upgradeState = PartUpgrade.UpgradeState.Enabled;
-          }
+        if (!pu.isUnlocked)
+        {
+          pu.upgradeState = PartUpgrade.UpgradeState.Unresearched;
+        }
+        else if (upgrades.Where(p => p.isUnlocked).ToList().Exists(p => p.isOverriding(pu.upgradeName)))
+        {
+          pu.upgradeState = PartUpgrade.UpgradeState.Overriden;
+        }
+        else
+        {
+          pu.upgradeState = PartUpgrade.UpgradeState.Enabled;
+        }
       }
     }
 
@@ -264,7 +264,7 @@ namespace UpgradesGUI
       }
       info += "\n";
 
-      if (moduleUpgrades.Exists(p => p.moduleName == "PartStatsUpgradeModule"))
+      if (moduleUpgrades.Exists(p => p.moduleName == "PartStatsUpgradeModule") && moduleUpgrades.Find(p => p.moduleName == "PartStatsUpgradeModule").statsNode != null)
       {
         info += "<color=#99ff00ff><b>Part stats modifiers:</b></color>\n";
         ConfigNode cn = moduleUpgrades.Find(p => p.moduleName == "PartStatsUpgradeModule").statsNode;

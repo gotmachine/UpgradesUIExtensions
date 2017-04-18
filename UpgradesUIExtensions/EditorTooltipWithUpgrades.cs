@@ -313,11 +313,14 @@ namespace UpgradesGUI
                   {
                     widgetText += "<b>Mass modifier : </b>" + psum.GetModuleMass(upgradePrefab.part.mass, ModifierStagingSituation.CURRENT).ToString("+ 0.###;- #.###") + " t\n";
                   }
-                  foreach (ConfigNode.Value value in psum.upgradeNode.values)
+                  if (psum.upgradeNode != null)
                   {
-                    if (value.name != "cost" && value.name != "costAdd" && value.name != "mass" && value.name != "massAdd")
+                    foreach (ConfigNode.Value value in psum.upgradeNode.values)
                     {
-                      widgetText += "<b>New " + value.name + ": </b>" + value.value + " \n";
+                      if (value.name != "cost" && value.name != "costAdd" && value.name != "mass" && value.name != "massAdd")
+                      {
+                        widgetText += "<b>New " + value.name + ": </b>" + value.value + " \n";
+                      }
                     }
                   }
                 }
@@ -377,7 +380,6 @@ namespace UpgradesGUI
 
     private void ApplyUpgrades(UpgradePrefab prefab)
     {
-      // Get the upgraded state of 
       Dictionary<PartModule, bool> moduleUpgraded = new Dictionary<PartModule, bool>();
       foreach (PartModule pm in prefab.part.Modules)
       {
@@ -417,7 +419,7 @@ namespace UpgradesGUI
         bool wasUpgraded = false;
         moduleUpgraded.TryGetValue(pm, out wasUpgraded);
         
-        if (wasUpgraded && pm.upgradesApplied.Count == 0)
+        if (wasUpgraded && pm.upgradesApplied.Count == 0) // THIS DON'T WORK FOR A ModuleDataTransmitter. WHY ? 
         {
           pm.OnAwake();
           if (moduleNodes != null)
@@ -440,20 +442,22 @@ namespace UpgradesGUI
             PartStatsUpgradeModule psum = (PartStatsUpgradeModule)pm;
             psum.costOffset = 0;
             psum.massOffset = 0;
-            foreach (ConfigNode.Value v in psum.upgradeNode.values)
+            if (psum.upgradeNode != null)
             {
-              if (v.name != "mass" && v.name != "cost" && v.name != "massAdd " && v.name != "costAdd")
+              foreach (ConfigNode.Value v in psum.upgradeNode.values)
               {
-                try
+                if (v.name != "mass" && v.name != "cost" && v.name != "massAdd " && v.name != "costAdd")
                 {
-                  FieldInfo partField = prefab.part.GetType().GetField(v.name);
-                  partField.SetValue(prefab.part, Convert.ChangeType(prefab.part.partInfo.partConfig.GetValue(v.name), partField.FieldType));
+                  try
+                  {
+                    FieldInfo partField = prefab.part.GetType().GetField(v.name);
+                    partField.SetValue(prefab.part, Convert.ChangeType(prefab.part.partInfo.partConfig.GetValue(v.name), partField.FieldType));
+                  }
+                  catch (Exception)
+                  {
+                    Debug.LogError("[UpgradesUIextensions] Could not revert part field \"" + v.name + "\" to initial value");
+                  }
                 }
-                catch (Exception)
-                {
-                  Debug.LogError("[UpgradesUIextensions] Could not revert part field \"" + v.name + "\" to initial value");
-                }
-                
               }
             }
           }
