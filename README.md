@@ -44,7 +44,7 @@ So public domain, feel free to do anything, especially updating this plugin if I
 #### Known bugs and glitches
 - None at the moment
 
-#### v1.4 for KSP 1.2.2 - 28/03/2017
+#### v1.4 for KSP 1.2.2 - 18/04/2017
 
 - New feature : upgrade selection system
 - Refactored a lot of things
