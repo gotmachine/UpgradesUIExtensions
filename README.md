@@ -48,6 +48,7 @@ So public domain, feel free to do anything, especially updating this plugin if I
 
 - New feature : upgrade selection system
 - Refactored a lot of things
+- Re-fixed nullref on creating the upgraded parts prefab (thanks @Oort for the perfect bug report)
 
 #### v1.3 for KSP 1.2.2 - 28/03/2017
 
