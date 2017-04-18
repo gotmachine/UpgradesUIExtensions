@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 
-namespace UpgradesUIExtensions
+namespace UpgradesGUI
 {
   [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
   public class RDColoredUpgradeIcon : MonoBehaviour

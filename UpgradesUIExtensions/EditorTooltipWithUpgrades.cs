@@ -19,7 +19,7 @@ using System.Text;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 
-namespace UpgradesUIExtensions
+namespace UpgradesGUI
 {
   [KSPAddon(KSPAddon.Startup.EditorAny, false)]
   public class PatchEditorTooltip : MonoBehaviour

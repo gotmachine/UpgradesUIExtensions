@@ -7,8 +7,8 @@
     <ProjectGuid>{BBB8F240-E793-4E7F-B496-86067A0F9D0D}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>UpgradesUIExtensions</RootNamespace>
-    <AssemblyName>UpgradesUIExtensions</AssemblyName>
+    <RootNamespace>UpgradesGUI</RootNamespace>
+    <AssemblyName>UpgradesGUI</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -31,7 +31,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\Desktop\Kerbal.Space.Program.v1.2.2.1622.DEV\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\Kerbal.Space.Program.v1.2.2.1622.DEV\KSP_x64_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -40,10 +40,10 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
     <Reference Include="UnityEngine">
-      <HintPath>..\..\..\..\Desktop\Kerbal.Space.Program.v1.2.2.1622.DEV\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>..\..\..\..\Kerbal.Space.Program.v1.2.2.1622.DEV\KSP_x64_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>..\..\..\..\Desktop\Kerbal.Space.Program.v1.2.2.1622.DEV\KSP_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>..\..\..\..\Kerbal.Space.Program.v1.2.2.1622.DEV\KSP_x64_Data\Managed\UnityEngine.UI.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -52,11 +52,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RDColoredUpgradeIcon.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>"C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\pdb2mdb.exe" "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesUIExtensions.dll"
-xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesUIExtensions.dll" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"
-xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesUIExtensions.dll.mdb" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"</PostBuildEvent>
+    <PostBuildEvent>"C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\pdb2mdb.exe" "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesGUI.dll"
+xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesGUI.dll" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"
+xcopy /Y "C:\Users\Got\Desktop\KSP\Plugins projects\UpgradesUIExtensions\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesGUI.dll.mdb" "C:\Users\Got\Desktop\KSP\Kerbal.Space.Program.v1.2.2.1622.DEV\GameData\"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
