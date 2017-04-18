@@ -45,27 +45,26 @@ namespace UpgradesUIExtensions
       foreach (AvailablePart ap in PartLoader.LoadedPartsList)
       {
         // Special parts like EVAkerbal or flag aren't needed :
-        if (ap.partUrl != "")
+        if (ap.partUrl == "" || ap.partConfig == null) continue;
+        
+        // Part newPart = (Part)obj;
+        Part upgradedPart = Instantiate(ap.partPrefab);
+        if (upgradedPart != null)
         {
-          // Part newPart = (Part)obj;
-          Part upgradedPart = Instantiate(ap.partPrefab);
-          if (upgradedPart != null)
-          {
-            upgradedPart.gameObject.name = ap.name;
-            upgradedPart.partInfo = ap;
+          upgradedPart.gameObject.name = ap.name;
+          upgradedPart.partInfo = ap;
             
-            // Temporally enable the part to be able to call ApplyUpgrades on all modules
-            // so upgrades nodes are checked and applyied to the part/module properties.
-            // We try to call modules OnLoad to replicate the exact state of part prefabs.
-            upgradedPart.gameObject.SetActive(true);
-            LoadModulesUpgrades(upgradedPart, ap);
+          // Temporally enable the part to be able to call ApplyUpgrades on all modules
+          // so upgrades nodes are checked and applyied to the part/module properties.
+          // We try to call modules OnLoad to replicate the exact state of part prefabs.
+          upgradedPart.gameObject.SetActive(true);
+          LoadModulesUpgrades(upgradedPart, ap);
 
-            // Disable the gameobject so the part isn't rendered and can't be interacted with
-            upgradedPart.gameObject.SetActive(false);
+          // Disable the gameobject so the part isn't rendered and can't be interacted with
+          upgradedPart.gameObject.SetActive(false);
 
-            // Add the part to our list
-            upgradePrefabs.Add(new UpgradePrefab(upgradedPart));
-          }
+          // Add the part to our list
+          upgradePrefabs.Add(new UpgradePrefab(upgradedPart));
         }
       }
       HighLogic.LoadedScene = currentScene;
