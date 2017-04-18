@@ -56,11 +56,6 @@ So public domain, feel free to do anything, especially updating this plugin if I
 - Fixed an issue causing an exception within the GameDatabase, this resolve the issue with toolbar icons disappearance (Thanks @Rodger)
 - The module widget list in the part tooltip is now sorted alphabetically (this reproduce the stock behaviour)
 
-#### v1.3 for KSP 1.2.2 - 28/03/2017
-
-- Fixed an issue causing an exception within the GameDatabase, this resolve the issue with toolbar icons disappearance (Thanks @Rodger)
-- The module widget list in the part tooltip is now sorted alphabetically (this reproduce the stock behaviour)
-
 #### v1.2 for KSP 1.2.2 - 24/03/2017
 
 - The "custom prefabs" parts now try to call OnLoad() on their modules, with the HighLogic.LoadedScene set to LOADING, in an effort to better replicate what happens with the real part prefabs. This fix the issue with Kerbalism custom modules, and may prevent the same kind of error from surfacing in other plugins. Thanks @ShotgunNinja for guidance on what was happening.
