@@ -1,6 +1,7 @@
 # Upgrades GUI
 
-This plugin is a collections of user interface tweaks aimed at making the part/module upgrades feature introduced in 1.2 a bit less painful to use for the player :
+This plugin is a collections of interface tweaks aimed at making the part/module upgrades feature introduced in 1.2 more user-friendly.
+Note that **the plugin doesn't add any upgrades**. If you want to have them in your game you need to download other mods that implement the upgrade feature.
 
 ![screenshot](https://raw.githubusercontent.com/gotmachine/UpgradesUIExtensions/902603cd0c7de45af979129f7af6f8fb839f912c/Documents/tooltipTweaks.png)
 
