@@ -1,4 +1,4 @@
-# Upgrades UI extensions
+# Upgrades GUI
 
 This plugin is a collections of user interface tweaks aimed at making the part/module upgrades feature introduced in 1.2 a bit less painful to use for the player :
 
