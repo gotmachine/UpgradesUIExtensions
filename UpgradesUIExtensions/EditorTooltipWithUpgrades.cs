@@ -16,14 +16,24 @@ using UnityEngine;
 using KSP.UI.Screens.Editor;
 using System.Globalization;
 using System.Text;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 namespace UpgradesUIExtensions
 {
   [KSPAddon(KSPAddon.Startup.EditorAny, false)]
   public class PatchEditorTooltip : MonoBehaviour
   {
-    List<Part> upgradedParts = new List<Part>();
+    List<UpgradePrefab> upgradePrefabs = new List<UpgradePrefab>();
     PartListTooltip tooltip = null;
+    PartListTooltipWidget toggleWidget = null;
+    bool updateTooltip = false;
+    bool toggleWidgets = false;
+
+    public void OnDestroy()
+    {
+      PartUpgradeHandler.AllEnabled = true;
+    }
 
     public void Start()
     {
@@ -32,51 +42,35 @@ namespace UpgradesUIExtensions
       GameScenes currentScene = HighLogic.LoadedScene;
       HighLogic.LoadedScene = GameScenes.LOADING;
 
-      // Create an hidden and disabled instance for every loaded part with their stats correctly updated according to the available updates
-      // These instances will be used to retrieve the updated tooltip text and widgets
       foreach (AvailablePart ap in PartLoader.LoadedPartsList)
       {
         // Special parts like EVAkerbal or flag aren't needed :
-        if (ap.partUrl != "")
+        if (ap.partUrl == "" || ap.partConfig == null) continue;
+        
+        // Part newPart = (Part)obj;
+        Part upgradedPart = Instantiate(ap.partPrefab);
+        if (upgradedPart != null)
         {
-          Part upgradedPart = Instantiate(ap.partPrefab);
-          if (upgradedPart != null)
-          {
-            upgradedPart.gameObject.name = ap.name;
-            upgradedPart.partInfo = ap;
+          upgradedPart.gameObject.name = ap.name;
+          upgradedPart.partInfo = ap;
+            
+          // Temporally enable the part to be able to call ApplyUpgrades on all modules
+          // so upgrades nodes are checked and applyied to the part/module properties.
+          // We try to call modules OnLoad to replicate the exact state of part prefabs.
+          upgradedPart.gameObject.SetActive(true);
+          LoadModulesUpgrades(upgradedPart, ap);
 
-            // Temporally enable the part to be able to call ApplyUpgrades on all modules
-            // so upgrades nodes are checked and applyied to the part/module properties.
-            // We try to call modules OnLoad to replicate the exact state of part prefabs.
-            upgradedPart.gameObject.SetActive(true);
-            int i = 0;
-            ConfigNode[] moduleNodes = ap.partConfig.GetNodes("MODULE");
-            foreach (PartModule pm in upgradedPart.Modules)
-            {
-              pm.OnAwake();
-              if (moduleNodes != null)
-              {
-                if (moduleNodes.Count() > i)
-                {
-                  if (moduleNodes[i].GetValue("name") == pm.moduleName)
-                  {
-                    pm.OnLoad(moduleNodes[i]);
-                  }
-                }
-              }
-              pm.ApplyUpgrades(PartModule.StartState.Editor);
-              i++;
-            }
+          // Disable the gameobject so the part isn't rendered and can't be interacted with
+          upgradedPart.gameObject.SetActive(false);
 
-            // Disable the gameobject so the part isn't rendered and can't be interacted with
-            upgradedPart.gameObject.SetActive(false);
-
-            // Add the part to our list
-            upgradedParts.Add(upgradedPart);
-          }
+          // Add the part to our list
+          upgradePrefabs.Add(new UpgradePrefab(upgradedPart));
         }
       }
       HighLogic.LoadedScene = currentScene;
+
+      // We now want to control ourself if the upgrades are available :
+      PartUpgradeHandler.AllEnabled = false;
     }
 
     public void Update()
@@ -84,27 +78,74 @@ namespace UpgradesUIExtensions
       // Do nothing if there is no PartListTooltip on screen
       if (PartListTooltipMasterController.Instance.currentTooltip == null) { return; }
 
-      // Do nothing if the tooltip hasn't changed since last update
-      if (tooltip == PartListTooltipMasterController.Instance.currentTooltip) { return; }
+      // Do nothing if the tooltip hasn't changed since last update and we have nothing to update in the tooltip
+      if (tooltip == PartListTooltipMasterController.Instance.currentTooltip && !updateTooltip && !toggleWidgets) { return; }
 
-      // Get the PartListTooltip
-      tooltip = PartListTooltipMasterController.Instance.currentTooltip;
+      // Get the upgrade prefab for this tooltip :
+      UpgradePrefab upgradePrefab = GetTooltipInstance();
+      // ReferenceEquals is a workaround because unity does a silly overload of the == operator
+      if (ReferenceEquals(upgradePrefab, null)) { return; }
 
-      // Find the currently shown part in the list of updated parts instances
-      var field = typeof(PartListTooltip).GetField("partInfo", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance);
-      AvailablePart partInfo = (AvailablePart)field.GetValue(tooltip);
-      Part part = upgradedParts.Find(p => p.partInfo == partInfo);
-      if (part == null)
+      // Toggle widget visibility in response to user click on toggle widget, and do nothing else
+      if (toggleWidgets)
       {
-        Debug.LogWarning("[UpgradesUIExtensions] Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
+        toggleWidgets = false;
+        ToggleWidgetsVisibility(upgradePrefab);
         return;
       }
 
-      // Rebuilding the tooltip cost string :
-      tooltip.textCost.text = "<b>Cost: </b><sprite=2 tint=1>  <b>" +
-        (part.partInfo.cost + part.GetModuleCosts(part.partInfo.cost)).ToString("N2", CultureInfo.InvariantCulture) + // x,xxx.xx
-        " </b>";
+      // Update everything needed in response to the player enabling/disabling an upgrade
+      if (updateTooltip)
+      {
+        updateTooltip = false;
+        // Update the upgrade prefab in response to player toggle
+        UpgradeWidgetComponent[] upgrades = tooltip.panelExtended.gameObject.GetComponentsInChildren<UpgradeWidgetComponent>();
+        UpgradeWidgetComponent toggledWidget = upgrades.First(p => p.isUpdated);
+        upgradePrefab.UpdateUpgradesState(toggledWidget);
 
+        // Destroy upgrade widgets
+        for (int k = 0; k < upgrades.Count(); k++)
+        {
+          Destroy(upgrades[k].gameObject);
+        }
+      }
+      // If this is a new tooltip, we destroy the toggle widget if it exists
+      else if (toggleWidget != null)
+      {
+        Destroy(toggleWidget.gameObject);
+        toggleWidget = null;
+      }
+
+      // Update the PartUpgradeHandler with enabled upgrades for this part and ApplyUpgrades() on all modules
+      ApplyUpgrades(upgradePrefab);
+
+      // Rebuilding the tooltip cost string :
+      tooltip.textCost.text = GetPartCost(upgradePrefab.part);
+
+      // Update the part basic info with the new text :
+      tooltip.textInfoBasic.text = GetPartInfo(upgradePrefab.part);
+
+      // Update the module widgets text :
+      UpdateModuleWidgetInfo(upgradePrefab);
+
+      // Create the widget list toggle widget :
+      if (toggleWidget == null && upgradePrefab.upgrades.Count > 0)
+      {
+        toggleWidget = CreateListToggleWidget(tooltip.panelExtended.gameObject.GetChild("Content"), upgradePrefab);
+      }
+
+      if (toggleWidget != null)
+      {
+        // Instantiate and setup the upgrade widgets
+        CreateUpgradeWidgets(upgradePrefab, tooltip.panelExtended.gameObject.GetChild("Content"));
+
+        // Toggle widgets visibility
+        ToggleWidgetsVisibility(upgradePrefab);
+      }
+    }
+
+    private string GetPartInfo(Part part)
+    {
       // Rebuilding the global part stats string :
       string basicInfo = "<color=#acfffc>";
 
@@ -191,14 +232,23 @@ namespace UpgradesUIExtensions
       }
 
       basicInfo += "</color>";
+      return basicInfo;
+    }
 
-      // Update the tooltip with the new text :
-      tooltip.textInfoBasic.text = basicInfo;
+    private string GetPartCost(Part part)
+    {
+      string cost = "<b>Cost: </b><sprite=2 tint=1>  <b>" +
+        (part.partInfo.cost + part.GetModuleCosts(part.partInfo.cost)).ToString("N2", CultureInfo.InvariantCulture) + // x,xxx.xx
+        " </b>";
+      return cost;
+    }
 
+    private void UpdateModuleWidgetInfo(UpgradePrefab upgradePrefab)
+    {
       // Update every module widget :
       int i = 0;
-      List<PartModule> modules = part.Modules.GetModules<PartModule>().OrderBy(p => p.GUIName).ToList();
-      foreach (PartListTooltipWidget widget in tooltip.panelExtended.GetComponentsInChildren<PartListTooltipWidget>())
+      List<PartModule> modules = upgradePrefab.part.Modules.GetModules<PartModule>().OrderBy(p => p.GUIName).ToList();
+      foreach (PartListTooltipWidget widget in tooltip.panelExtended.GetComponentsInChildren<PartListTooltipWidget>(true))
       {
         // Resource widgets are named "PartListTooltipExtendedResourceInfo(Clone)"
         // Module widgets are named "PartListTooltipExtendedPartInfo(Clone)"
@@ -219,7 +269,7 @@ namespace UpgradesUIExtensions
             {
               widgetTitle = widget.textName.text;
               widgetText = widget.textInfo.text;
-              Debug.LogWarning("[UpgradesUIExtensions] Could not retrieve module text for module " + modules[i].GUIName);
+              Debug.LogWarning("[UpgradesUIextensions] Could not retrieve module text for module " + modules[i].GUIName);
             }
 
             // Stock doesn't create a widget for modules that return an empty GetInfo(), but seems to be
@@ -255,13 +305,13 @@ namespace UpgradesUIExtensions
                   }
 
                   PartStatsUpgradeModule psum = (PartStatsUpgradeModule)modules[i];
-                  if (psum.GetModuleCost(part.partInfo.cost, ModifierStagingSituation.CURRENT) > float.Epsilon || psum.GetModuleCost(part.partInfo.cost, ModifierStagingSituation.CURRENT) < -float.Epsilon)
+                  if (psum.GetModuleCost(upgradePrefab.part.partInfo.cost, ModifierStagingSituation.CURRENT) > float.Epsilon || psum.GetModuleCost(upgradePrefab.part.partInfo.cost, ModifierStagingSituation.CURRENT) < -float.Epsilon)
                   {
-                    widgetText += "<b>Cost modifier : </b>" + psum.GetModuleCost(part.partInfo.cost, ModifierStagingSituation.CURRENT).ToString("+ 0;- #") + " <sprite=2 tint=1>\n";
+                    widgetText += "<b>Cost modifier : </b>" + psum.GetModuleCost(upgradePrefab.part.partInfo.cost, ModifierStagingSituation.CURRENT).ToString("+ 0;- #") + " <sprite=2 tint=1>\n";
                   }
-                  if (psum.GetModuleMass(part.mass, ModifierStagingSituation.CURRENT) > float.Epsilon || psum.GetModuleMass(part.mass, ModifierStagingSituation.CURRENT) < -float.Epsilon)
+                  if (psum.GetModuleMass(upgradePrefab.part.mass, ModifierStagingSituation.CURRENT) > float.Epsilon || psum.GetModuleMass(upgradePrefab.part.mass, ModifierStagingSituation.CURRENT) < -float.Epsilon)
                   {
-                    widgetText += "<b>Mass modifier : </b>" + psum.GetModuleMass(part.mass, ModifierStagingSituation.CURRENT).ToString("+ 0.###;- #.###") + " t\n";
+                    widgetText += "<b>Mass modifier : </b>" + psum.GetModuleMass(upgradePrefab.part.mass, ModifierStagingSituation.CURRENT).ToString("+ 0.###;- #.###") + " t\n";
                   }
                   foreach (ConfigNode.Value value in psum.upgradeNode.values)
                   {
@@ -303,12 +353,276 @@ namespace UpgradesUIExtensions
       }
     }
 
+    private void LoadModulesUpgrades(Part p, AvailablePart ap)
+    {
+      int i = 0;
+      ConfigNode[] moduleNodes = ap.partConfig.GetNodes("MODULE");
+      foreach (PartModule pm in p.Modules)
+      {
+        pm.OnAwake();
+        if (moduleNodes != null)
+        {
+          if (moduleNodes.Count() > i)
+          {
+            if (moduleNodes[i].GetValue("name") == pm.moduleName)
+            {
+              pm.OnLoad(moduleNodes[i]);
+            }
+          }
+        }
+        pm.ApplyUpgrades(PartModule.StartState.Editor);
+        i++;
+      }
+    }
+
+    private void ApplyUpgrades(UpgradePrefab prefab)
+    {
+      // Get the upgraded state of 
+      Dictionary<PartModule, bool> moduleUpgraded = new Dictionary<PartModule, bool>();
+      foreach (PartModule pm in prefab.part.Modules)
+      {
+        if (pm.upgradesApplied.Count > 0)
+        {
+          moduleUpgraded.Add(pm, true);
+        }
+        else
+        {
+          moduleUpgraded.Add(pm, false);
+        }
+      }
+
+      // Enable upgrades in the handler to reflect the state of user selection for this part
+      foreach (PartUpgrade pu in prefab.upgrades)
+      {
+        if (pu.upgradeState == PartUpgrade.UpgradeState.Disabled)
+        {
+          PartUpgradeManager.Handler.SetEnabled(pu.upgradeName, false);
+
+        }
+        else
+        {
+          PartUpgradeManager.Handler.SetEnabled(pu.upgradeName, true);
+        }
+      }
+
+      // Apply upgrades on modules
+      // Due to ApplyUpgrades() not doing anything when all upgrades are disabled
+      // I need to do OnLoad from the config node to revert the module fields to their
+      // default value in this case
+      int i = 0;
+      ConfigNode[] moduleNodes = prefab.part.partInfo.partConfig.GetNodes("MODULE");
+      foreach (PartModule pm in prefab.part.Modules)
+      {
+        pm.ApplyUpgrades(PartModule.StartState.Editor);
+        bool wasUpgraded = false;
+        moduleUpgraded.TryGetValue(pm, out wasUpgraded);
+        
+        if (wasUpgraded && pm.upgradesApplied.Count == 0)
+        {
+          pm.OnAwake();
+          if (moduleNodes != null)
+          {
+            if (moduleNodes.Count() > i)
+            {
+              if (moduleNodes[i].GetValue("name") == pm.moduleName)
+              {
+                pm.OnLoad(moduleNodes[i]);
+              }
+            }
+          }
+          // In case of a PartStatsUpgradeModule, things get ugly because I've got no public function
+          // that reset the module mass/cost modifiers, so I manually set them to 0. For part fields 
+          // modifiers I'm forced to parse the upgrade node to reset the corresponding part fields to 
+          // their config value.
+          // TODO : test this with a more complex multi-node stats module
+          if (pm is PartStatsUpgradeModule)
+          {
+            PartStatsUpgradeModule psum = (PartStatsUpgradeModule)pm;
+            psum.costOffset = 0;
+            psum.massOffset = 0;
+            foreach (ConfigNode.Value v in psum.upgradeNode.values)
+            {
+              if (v.name != "mass" && v.name != "cost" && v.name != "massAdd " && v.name != "costAdd")
+              {
+                try
+                {
+                  FieldInfo partField = prefab.part.GetType().GetField(v.name);
+                  partField.SetValue(prefab.part, Convert.ChangeType(prefab.part.partInfo.partConfig.GetValue(v.name), partField.FieldType));
+                }
+                catch (Exception)
+                {
+                  Debug.LogError("[UpgradesUIextensions] Could not revert part field \"" + v.name + "\" to initial value");
+                }
+                
+              }
+            }
+          }
+          pm.ApplyUpgrades(PartModule.StartState.Editor);
+        }
+        i++;
+      }
+    }
+
+    private UpgradePrefab GetTooltipInstance()
+    {
+      // Get the PartListTooltip
+      tooltip = PartListTooltipMasterController.Instance.currentTooltip;
+
+      // Find the currently shown part in the list of updated parts instances
+      var field = typeof(PartListTooltip).GetField("partInfo", BindingFlags.NonPublic | BindingFlags.GetField | BindingFlags.Instance);
+      AvailablePart partInfo = (AvailablePart)field.GetValue(tooltip);
+      UpgradePrefab upgradePrefab = upgradePrefabs.Find(p => p.part.partInfo == partInfo);
+      if (ReferenceEquals(upgradePrefab, null)) // Workaround because unity does a silly overload of the == operator
+      {
+        Debug.LogWarning("[UpgradesUIextensions] Part upgrade stats for \"" + partInfo.title + "\" not found, using default stats.");
+      }
+      return upgradePrefab;
+    }
+
+    private PartListTooltipWidget CreateListToggleWidget(GameObject container, UpgradePrefab prefab)
+    {
+      // Create new widget
+      PartListTooltipWidget newWidget = Instantiate(tooltip.extInfoRscWidgePrefab);
+      newWidget.gameObject.name = "Widget list toggle";
+      // Add widget to container and set it as the first one
+      newWidget.transform.SetParent(container.transform, false);
+      newWidget.transform.SetAsFirstSibling();
+      // Create a toggle
+      Toggle toggle = newWidget.gameObject.AddComponent<Toggle>();
+      toggle.isOn = true;
+      toggle.enabled = true;
+      toggle.onValueChanged.AddListener(onListToggle);
+      // Initialize widget text then destroy info text object (we only need the title)
+      newWidget.Setup("null", "null");
+      Destroy(newWidget.gameObject.GetChild("ModuleInfoText"));
+      newWidget.gameObject.SetActive(true);
+      return newWidget;
+    }
+
+    private void onListToggle(bool isOn)
+    {
+      toggleWidgets = true;
+    }
+
+    private void ToggleWidgetsVisibility(UpgradePrefab prefab)
+    {
+      PartListTooltipWidget[] widgets = tooltip.panelExtended.GetComponentsInChildren<PartListTooltipWidget>(true);
+      bool isModuleView = toggleWidget.GetComponent<Toggle>().isOn;
+      foreach (PartListTooltipWidget widget in widgets)
+      {
+        if (widget.name == "PartListTooltipExtendedPartInfo(Clone)" || widget.name == "PartListTooltipExtendedResourceInfo(Clone)")
+        {
+          widget.gameObject.SetActive(isModuleView);
+        }
+        if (widget.name == "Upgrade tooltip widget")
+        {
+          widget.gameObject.SetActive(!isModuleView);
+        }
+        if (widget.name == "Widget list toggle")
+        {
+          if (isModuleView)
+          {
+            int disabledUpgrades = prefab.upgrades.Count(p => p.upgradeState == PartUpgrade.UpgradeState.Disabled);
+            if (disabledUpgrades > 0)
+            {
+              widget.GetComponent<Image>().color = Color255(222, 193, 88); // pale yellow
+              widget.textName.text = "Select upgrades (" + disabledUpgrades + " disabled)";
+            }
+            else
+            {
+              widget.GetComponent<Image>().color = Color255(149, 223, 102); // pale green
+              widget.textName.text = "Select upgrades (all enabled)";
+            }
+          }
+          else
+          {
+            widget.GetComponent<Image>().color = Color.white;
+            widget.textName.text = "Show modules & resources";
+          }
+        }
+      }
+    }
+
+    private void CreateUpgradeWidgets(UpgradePrefab prefab, GameObject container)
+    {
+      foreach (PartUpgrade pu in prefab.upgrades)
+      {
+        // Don't create widgets for untracked upgrades
+        if (pu.isUntracked) { continue; }
+        // Create new widget
+        PartListTooltipWidget newWidget = Instantiate(tooltip.extInfoModuleWidgetPrefab);
+        newWidget.gameObject.name = "Upgrade tooltip widget";
+        // Add widget to list
+        newWidget.transform.SetParent(container.transform, false);
+        // Add "toggle" component
+        if ((pu.upgradeState == PartUpgrade.UpgradeState.Enabled || pu.upgradeState == PartUpgrade.UpgradeState.Disabled))
+        {
+          Toggle toggle = newWidget.gameObject.AddComponent<Toggle>();
+          toggle.isOn = (pu.upgradeState == PartUpgrade.UpgradeState.Enabled) ? true : false;
+          toggle.enabled = true;
+          toggle.onValueChanged.AddListener(onUpgradeToggle);
+        }
+        // Add the upgrade handler
+        UpgradeWidgetComponent handler = newWidget.gameObject.AddComponent<UpgradeWidgetComponent>();
+        handler.partName = prefab.part.partInfo.name;
+        handler.upgrade = pu.upgradeName;
+        handler.upgradeState = pu.upgradeState;
+        handler.isUpdated = false;
+        // Create text
+        newWidget.Setup(pu.GetTitle(), pu.GetInfo(prefab));
+        ToggleColors(handler, newWidget.GetComponent<Image>());
+        // Everything is good
+        newWidget.gameObject.SetActive(true);
+      }
+    }
+
+    private void onUpgradeToggle(bool isOn)
+    {
+      
+      UpgradeWidgetComponent upgradeComponent = EventSystem.current.currentSelectedGameObject.GetComponent<UpgradeWidgetComponent>();
+
+      if (isOn)
+      {
+        upgradeComponent.upgradeState = PartUpgrade.UpgradeState.Enabled;
+      }
+      else
+      {
+        upgradeComponent.upgradeState = PartUpgrade.UpgradeState.Disabled;
+      }
+      upgradeComponent.isUpdated = true;
+      updateTooltip = true;
+    }
+
+    private void ToggleColors(UpgradeWidgetComponent handler, Image imageComponent)
+    {
+      switch (handler.upgradeState)
+      {
+        case PartUpgrade.UpgradeState.Unresearched:
+          imageComponent.color = Color255(89, 139, 122); // blue
+          break;
+        case PartUpgrade.UpgradeState.Disabled:
+          imageComponent.color = Color255(222, 193, 88); // yellow
+          break;
+        case PartUpgrade.UpgradeState.Overriden:
+          imageComponent.color = Color255(177, 115, 87); // orange
+          break;
+        case PartUpgrade.UpgradeState.Enabled:
+          imageComponent.color = Color255(149, 223, 102); // green
+          break;
+      }
+    }
+
     public string RemoveControlCharacters(string input)
     {
       return
           input.Where(character => !char.IsControl(character))
           .Aggregate(new StringBuilder(), (builder, character) => builder.Append(character))
           .ToString();
+    }
+
+    public static Color Color255(int r, int g, int b, int a = 255)
+    {
+      return new Color(r / 255.0F, g / 255.0F, b / 255.0F, a / 255.0F);
     }
 
   }
