@@ -2,7 +2,7 @@
 
 This plugin is a collections of user interface tweaks aimed at making the part/module upgrades feature introduced in 1.2 a bit less painful to use for the player :
 
-![screenshot](https://github.com/gotmachine/UpgradesUIExtensions/raw/3b84a046bdf9de080792d63a51e21ad47e8cc153/Documents/tooltipTweaks.png)
+![screenshot](https://raw.githubusercontent.com/gotmachine/UpgradesUIExtensions/902603cd0c7de45af979129f7af6f8fb839f912c/Documents/tooltipTweaks.png)
 
 #### VAB/SPH part tooltips show upgraded stats
 - The part stats are now updated according to unlocked upgrades.
@@ -50,6 +50,7 @@ So public domain, feel free to do anything, especially updating this plugin if I
 - Refactored a lot of things
 - Re-fixed nullref on creating the upgraded parts prefab (thanks @Oort for the perfect bug report)
 - Removed mini-AVC dll, KSP-AVC is still supported
+- Changed plugin name to "UpgradesGUI"
 
 #### v1.3 for KSP 1.2.2 - 28/03/2017
 
