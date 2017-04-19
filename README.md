@@ -45,6 +45,11 @@ So public domain, feel free to do anything, especially updating this plugin if I
 #### Known bugs and glitches
 - None at the moment
 
+#### v1.5 for KSP 1.2.2 - 19/04/2017
+- (Issue #5 fix) : NRE when PartStats{} node is absent from PartStatsUpgradeModule bug
+- (Issue #4 fix) : ModuleDataTransmitter (and others) doesn't revert to base stats bug
+- (Issue #3 fix) : Incorrect state of upgrades at init bug 
+
 #### v1.4 for KSP 1.2.2 - 18/04/2017
 
 - New feature : upgrade selection system
