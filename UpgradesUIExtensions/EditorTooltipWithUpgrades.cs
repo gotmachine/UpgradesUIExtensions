@@ -428,7 +428,7 @@ namespace UpgradesGUI
             {
               if (moduleNodes[i].GetValue("name") == pm.moduleName)
               {
-                pm.OnLoad(moduleNodes[i]);
+                pm.Load(moduleNodes[i]); // OnLoad() isn't enough (issue #4). ex : ok for ModuleEngines, not ok for ModuleDataTransmitter.
               }
             }
           }
