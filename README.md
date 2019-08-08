@@ -1,3 +1,6 @@
+![zer0Kerbal](https://img.shields.io/badge/KSP%20version-1.7.x-66ccff.svg?style=flat-square) 
+![zer0Kerbal](https://img.shields.io/badge/MOD%20version-1.7.3.1-orange.svg?style=flat-square)
+
 # Upgrades GUI
 
 This plugin is a collections of interface tweaks aimed at making the part/module upgrades feature introduced in 1.2 more user-friendly.
