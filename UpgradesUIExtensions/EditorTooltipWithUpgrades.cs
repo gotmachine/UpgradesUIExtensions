@@ -1,6 +1,6 @@
 ﻿/*
 FUTURE PLANS :
-Be able to select wich upgarde we want on the part in editor partlist UI :
+Be able to select which upgarde we want on the part in editor partlist UI :
 maybe by extending PartListTooltipWidget with a special "upgradewidget" for each active and available update
 this widget can be clicked on to be disabled, wich update the part prefab, the widget list and tooltip part stats and widget list with the previous upgrade.
 then we need to hook onpartadded to alter the created part according to the tooltip state
@@ -228,7 +228,7 @@ namespace UpgradesGUI
       // Resource list in green (note : GetInfo() doesn't have the same format as stock)
       foreach (PartResource pr in part.Resources)
       {
-        basicInfo += "<b>" + pr.info.title + ": </b>" + pr.maxAmount.ToString("F1") + "\n";
+        basicInfo += "<b>" + pr.part.partInfo.title + ": </b>" + pr.maxAmount.ToString("F1") + "\n";
       }
 
       basicInfo += "</color>";
