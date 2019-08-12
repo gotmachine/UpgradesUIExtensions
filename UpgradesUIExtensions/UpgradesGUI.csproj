@@ -59,8 +59,8 @@
   <PropertyGroup>
     <PostBuildEvent>
       "C:\KSP_DEV\Workspace\UpgradesUIExtensions\pdb2mdb.exe" "C:\KSP_DEV\Workspace\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesGUI.dll"
-      xcopy /Y "C:\KSP_DEV\Workspace\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesGUI.dll" "C:\KSP_DEV\Workspace\UpgradesUIExtensions\GameData\UpgradesGUI\Plugins\"
-      xcopy /Y "C:\KSP_DEV\Workspace\UpgradesUIExtensions\UpgradesUIExtensions\bin\Debug\UpgradesGUI.dll.mdb" "C:\KSP_DEV\Workspace\UpgradesUIExtensions\GameData\UpgradesGUI\Plugins\"</PostBuildEvent>
+      xcopy /Y "C:\KSP_DEV\Workspace\UpgradesUIExtensions\UpgradesUIExtensions\bin\Release\UpgradesGUI.dll" "C:\KSP_DEV\Workspace\UpgradesUIExtensions\GameData\UpgradesGUI\Plugins\"
+      xcopy /Y "C:\KSP_DEV\Workspace\UpgradesUIExtensions\UpgradesUIExtensions\bin\Release\UpgradesGUI.dll.mdb" "C:\KSP_DEV\Workspace\UpgradesUIExtensions\GameData\UpgradesGUI\Plugins\"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
